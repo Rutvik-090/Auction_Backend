@@ -6,6 +6,8 @@ import http from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db.js';
 
+import { startCronJobs } from './cron.js';
+import adminRoutes from './routes/admin.js';
 import auctionRoutes from './routes/auctions.js';
 import authRoutes from './routes/auth.js';
 import bidRoutes from './routes/bids.js';
@@ -15,6 +17,9 @@ dotenv.config();
 
 // Connect to database
 connectDB();
+
+// Start cron daemon
+startCronJobs();
 
 const app = express();
 const server = http.createServer(app);
@@ -57,6 +62,7 @@ app.set('io', io);
 app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/bids', bidRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
