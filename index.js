@@ -11,6 +11,7 @@ import adminRoutes from './routes/admin.js';
 import auctionRoutes from './routes/auctions.js';
 import authRoutes from './routes/auth.js';
 import bidRoutes from './routes/bids.js';
+import uploadRoutes from './routes/upload.js';
 
 // Load env vars
 dotenv.config();
@@ -63,6 +64,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/bids', bidRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
