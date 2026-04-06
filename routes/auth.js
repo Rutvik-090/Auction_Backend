@@ -8,7 +8,7 @@ const router = express.Router();
 // Generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: '7d',
   });
 };
 
@@ -16,7 +16,7 @@ const generateToken = (id) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, avatar } = req.body;
 
     const userExists = await User.findOne({ email });
 
@@ -28,6 +28,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password,
+      avatar: avatar || '',
     });
 
     if (user) {
@@ -35,6 +36,7 @@ router.post('/register', async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
         role: user.role,
         token: generateToken(user._id),
       });
@@ -60,6 +62,7 @@ router.post('/login', async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
         role: user.role,
         token: generateToken(user._id),
       });
@@ -82,6 +85,7 @@ router.get('/profile', protect, async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
         role: user.role,
       });
     } else {
@@ -92,5 +96,37 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
-export default router;
+// @route   PUT /api/auth/profile
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
 
+    if (user) {
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      if (req.body.avatar) user.avatar = req.body.avatar;
+
+      if (req.body.password) {
+        user.password = req.body.password;
+      }
+
+      const updatedUser = await user.save();
+
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar,
+        role: updatedUser.role,
+        token: generateToken(updatedUser._id),
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+export default router;
