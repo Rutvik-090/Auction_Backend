@@ -4,6 +4,8 @@ import { protect } from '../middleware/auth.js';
 import Auction from '../models/Auction.js';
 import Bid from '../models/Bid.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
@@ -57,7 +59,24 @@ router.post('/:auctionId', protect, async (req, res) => {
         message: `You have been outbid on "${auction.title}". The new bid is $${amount}.`,
         link: `/auction/${auction._id}`
       });
-      // Optionally emit via Socket.io here...
+
+      // Send Email Notification
+      try {
+        const outbidUser = await User.findById(previousHighestBidder);
+        if (outbidUser && outbidUser.email) {
+          await sendEmail({
+            email: outbidUser.email,
+            subject: 'You have been outbid!',
+            message: `<h1>Outbid Alert</h1>
+                      <p>Hi ${outbidUser.name},</p>
+                      <p>You have been outbid on <strong>${auction.title}</strong>.</p>
+                      <p>The new highest bid is <strong>$${amount}</strong>.</p>
+                      <p><a href="http://localhost:5173/auction/${auction._id}">Click here</a> to place a higher bid!</p>`
+          });
+        }
+      } catch (err) {
+        console.error('Error sending outbid email:', err);
+      }
     }
 
     // Emit live bid update via Socket.io
@@ -71,5 +90,19 @@ router.post('/:auctionId', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/bids/:auctionId
+// @access  Public
+router.get('/:auctionId', async (req, res) => {
+  try {
+    const bids = await Bid.find({ auction: req.params.auctionId })
+      .populate('bidder', 'name')
+      .sort({ time: -1 });
+
+    res.json(bids);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
 
 export default router;
