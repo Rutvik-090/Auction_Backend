@@ -1,6 +1,8 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
 import Auction from '../models/Auction.js';
+import User from '../models/User.js';
+import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
 
@@ -51,6 +53,24 @@ router.post('/', protect, async (req, res) => {
     });
 
     const createdAuction = await auction.save();
+
+    // Broadcast email to all users (Fire and Forget)
+    User.find({}).select('email name').then(users => {
+      users.forEach(u => {
+        if (u.email) {
+          sendEmail({
+            email: u.email,
+            subject: 'New Auction Available!',
+            message: `<h1>New Masterpiece listed!</h1>
+                      <p>Hi ${u.name},</p>
+                      <p>A new curated item "<strong>${createdAuction.title}</strong>" is now live.</p>
+                      <p>Starting at $${createdAuction.startingBid}.</p>
+                      <p><a href="http://localhost:5173/auction/${createdAuction._id}">View it now!</a></p>`
+          }).catch(console.error);
+        }
+      });
+    }).catch(console.error);
+
     res.status(201).json(createdAuction);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
